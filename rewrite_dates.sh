@@ -1,22 +1,21 @@
 #!/bin/bash
 
-# Ensure git-filter-repo is installed
-if ! command -v git-filter-repo &> /dev/null
-then
-    echo "git-filter-repo could not be found. Please install it using 'pip install git-filter-repo'."
-    exit 1
+# Ensure the repository is clean
+if ! git diff-index --quiet HEAD --; then
+  echo "Your repository is not clean. Commit or stash your changes before proceeding."
+  exit 1
 fi
 
-# Rewriting commit history
-git filter-repo --commit-callback '
-import datetime
+# Rewriting commit history to set dates to exactly 5 years earlier
+git filter-branch --env-filter '
+OLD_AUTHOR_DATE=$(git log -1 --pretty=format:%ai)
+OLD_COMMITTER_DATE=$(git log -1 --pretty=format:%ci)
 
-commit.author_date = str(
-    datetime.datetime.fromtimestamp(commit.author_date) - datetime.timedelta(days=5*365)
-)
-commit.committer_date = str(
-    datetime.datetime.fromtimestamp(commit.committer_date) - datetime.timedelta(days=5*365)
-)
-'
+NEW_AUTHOR_DATE=$(date -d "$OLD_AUTHOR_DATE - 5 years" +%Y-%m-%dT%H:%M:%S)
+NEW_COMMITTER_DATE=$(date -d "$OLD_COMMITTER_DATE - 5 years" +%Y-%m-%dT%H:%M:%S)
+
+export GIT_AUTHOR_DATE="$NEW_AUTHOR_DATE"
+export GIT_COMMITTER_DATE="$NEW_COMMITTER_DATE"
+' -- --all
 
 echo "Rewriting commit history completed. Don't forget to force push to your remote repository."
