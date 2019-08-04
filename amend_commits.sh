@@ -27,19 +27,15 @@ adjust_commit_date() {
   echo "New Committer Date: $new_committer_date"
 
   # Amend the commit with new dates
- echo GIT_COMMITTER_DATE="$new_committer_date" git commit --amend --no-edit --date="$new_author_date"
+  GIT_COMMITTER_DATE="$new_committer_date" GIT_AUTHOR_DATE="$new_author_date" git commit --amend --no-edit --date="$new_author_date"
 }
 
-# Export function to use in filter-branch
+# Export function to use in rebase
 export -f adjust_commit_date
 
-# Use filter-branch to amend specific commits
+# Iterate over each provided commit SHA and amend them
 for commit_sha in "$@"; do
-  git filter-branch --env-filter '
-    if [ "$GIT_COMMIT" = "'"$commit_sha"'" ]; then
-      adjust_commit_date "'"$commit_sha"'"
-    fi
-  ' -- --all
+  git rebase -i --exec "adjust_commit_date $commit_sha" $commit_sha^
 done
 
 echo "Amending commits completed. Don't forget to force push to your remote repository."
